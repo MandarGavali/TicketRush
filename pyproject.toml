@@ -12,6 +12,10 @@ extend-exclude = ["alembic/versions"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "UP", "C901"]
 
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]
+known-third-party = ["alembic"]
+
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
@@ -19,3 +23,4 @@ max-complexity = 10
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-ra"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]

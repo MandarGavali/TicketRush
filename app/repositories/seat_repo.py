@@ -13,7 +13,9 @@ class SeatRepository:
         self.session.add_all(seats)
 
     def list_for_event(self, event_id: int) -> list[Seat]:
-        stmt = select(Seat).where(Seat.event_id == event_id).order_by(Seat.row_label, Seat.seat_number)
+        stmt = (
+            select(Seat).where(Seat.event_id == event_id).order_by(Seat.row_label, Seat.seat_number)
+        )
         return list(self.session.scalars(stmt))
 
     def lock_available(self, event_id: int, seat_ids: list[int]) -> list[Seat]:

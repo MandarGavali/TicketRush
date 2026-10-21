@@ -45,7 +45,7 @@ class AuthService:
         user = self.users.get_by_email(data.email)
         if user is None or not verify_password(data.password, user.password_hash):
             self.limiter.record(LOGIN_SCOPE, client_ip)  # only failed attempts count
-            # Same message for "no such email" and "wrong password": do not reveal which emails exist.
+            # Same message for unknown email and wrong password: do not reveal which emails exist.
             raise AuthenticationError("Invalid email or password")
 
         token = create_access_token(user.id, user.role)

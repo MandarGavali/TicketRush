@@ -79,7 +79,7 @@ def main() -> None:
                 logger.info("Event %r already exists", data.title)
                 continue
             event = service.create_event(data, admin)
-            logger.info("Created event %r (id=%s, %s seats)", event.title, event.id, event.total_seats)
+            logger.info("Created event %r with %s seats", event.title, event.total_seats)
 
 
 if __name__ == "__main__":
