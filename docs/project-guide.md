@@ -34,7 +34,7 @@ A ticket-booking REST API built to show solid backend fundamentals.
 | Booking | Hold seats → pay → confirm, or cancel; holds expire after 5 min | Transactions, ACID, row locks, state machine |
 | Idempotency | `Idempotency-Key` header on `POST /bookings` | Safe retries, unique constraints |
 | Caching | Cache-aside on event detail, TTL, invalidate on update, Redis-down fallback | Caching, cache invalidation |
-| Rate limiting | Fixed window in Redis: login 5/min per IP, booking 10/min per user | Rate limiting, 429 |
+| Rate limiting | Fixed window in Redis: 5 failed logins/min per IP, 10 bookings/min per user | Rate limiting, 429 |
 | Background job | Sweeper that expires unpaid holds every 30 s | Background tasks, scheduled work |
 | Errors and logs | One error JSON format, request-id middleware, structured logs | Error handling, observability basics |
 | DB | PostgreSQL, SQLAlchemy 2, Alembic, constraints and indexes, joins | SQL, indexing, normalization, migrations |
@@ -154,9 +154,9 @@ All routes under `/api/v1` except `/health`. Auth = `Authorization: Bearer <jwt>
 
 | Method and path | Auth | Success | Errors | Notes |
 |---|---|---|---|---|
-| `GET /health` | - | 200 | 503 | Checks Postgres and Redis; reports each |
+| `GET /health` | - | 200 | 503 | Reports Postgres and Redis; 503 only if Postgres is down (Redis down = `degraded`, still 200) |
 | `POST /auth/register` | - | 201 user | 409 email taken, 422 | Password min 8 chars; hash never returned |
-| `POST /auth/login` | - | 200 `{access_token, token_type, expires_in}` | 401, 429 | Same 401 message for unknown email and wrong password |
+| `POST /auth/login` | - | 200 `{access_token, token_type, expires_in}` | 401, 429 | Same 401 message for unknown email and wrong password; 429 after 5 failed attempts in a minute |
 | `GET /users/me` | user | 200 user | 401 | |
 | `POST /events` | admin | 201 event | 401, 403, 422 | Body includes `rows` (1-26) and `seats_per_row` (1-50); seats created in the same transaction |
 | `GET /events` | - | 200 page | 422 | Query: `city`, `q` (title contains, case-insensitive), `from_date`, `to_date`, `sort` (`starts_at` / `-starts_at` / `price` / `-price`), `page` (≥1), `size` (1-50, default 10). Response: `{items, page, size, total}` |
@@ -198,14 +198,14 @@ sequenceDiagram
         DB-->>S: existing booking
         S-->>U: 201 same booking (no new work)
     else new key
-        S->>DB: BEGIN
+        Note over S,DB: transaction starts
+        S->>DB: INSERT booking (PENDING, expires_at = now + 5 min) -- claims the key
         S->>DB: SELECT ... FROM seats WHERE id IN (12,13) AND event_id=? AND status='AVAILABLE' ORDER BY id FOR UPDATE SKIP LOCKED
         alt got fewer rows than requested
-            S->>DB: ROLLBACK
+            S->>DB: ROLLBACK (booking row disappears too)
             S-->>U: 409 SEAT_UNAVAILABLE
         else got all seats
-            S->>DB: UPDATE seats SET status='HELD'
-            S->>DB: INSERT booking (PENDING, expires_at = now + 5 min), INSERT booking_seats
+            S->>DB: UPDATE seats SET status='HELD', INSERT booking_seats, set total
             S->>DB: COMMIT
             S-->>U: 201 booking
         end
@@ -219,8 +219,9 @@ Why each piece exists (say these in the interview):
 - **`SKIP LOCKED`**: if another user is locking the seat right now, do not wait for them; treat it as taken and answer `409` fast.
 - **`AND status = 'AVAILABLE'`**: a seat that is already held/booked is simply not returned.
 - **`ORDER BY id`**: all transactions lock rows in the same order, which prevents deadlocks.
-- **Idempotency key race**: if two requests with the same key arrive together, the unique constraint `(user_id, idempotency_key)`
-  makes the second `INSERT` fail with `IntegrityError`; the service rolls back, re-reads and returns the first booking.
+- **Idempotency key race**: the booking row is inserted *before* the seats are locked. If two requests with the same key arrive
+  together, the second `INSERT` waits on the unique index `(user_id, idempotency_key)` until the first commits, then fails with
+  `IntegrityError`; the service rolls back, re-reads and returns the first booking (proved by a 10-thread test).
 
 ### 8.2 Pay (`POST /bookings/{id}/pay`)
 
@@ -254,7 +255,8 @@ you would use a webhook. Kept simple here on purpose.
 
 - Key `rl:{scope}:{identity}:{window}` where `window = now // 60`.
 - `INCR` the key; if the result is 1, `EXPIRE` it for 60 s; if the result is above the limit → 429 with `Retry-After`.
-- Login: 5 per minute per client IP. Create booking: 10 per minute per user.
+- Login: 5 **failed** attempts per minute per client IP (successful logins are not counted, so many users behind one IP can still log in).
+  Create booking: 10 per minute per user.
 - Redis down → allow the request (fail open) and log a warning.
 - Trade-off to mention: a fixed window allows a burst at the window edge; sliding window or token bucket smooth that.
 
@@ -310,11 +312,14 @@ TicketRush/
     conftest.py
     unit/                   # domain + security, no DB
     integration/            # API tests with TestClient + real Postgres/Redis, incl. test_concurrency.py
+                            # (helpers.py: shared helpers; conftest.py: fixtures)
   scripts/race.py           # live demo: N concurrent requests for one seat against the running API
+  docker/postgres-init.sql  # creates ticketrush_test on first start
   Dockerfile
   docker-compose.yml
   .github/workflows/ci.yml
-  pyproject.toml
+  requirements.txt, requirements-dev.txt
+  pyproject.toml            # ruff + pytest config
   .env.example
   README.md
 ```
@@ -333,7 +338,7 @@ TicketRush/
 | `HOLD_MINUTES` | 5 |
 | `MAX_SEATS_PER_BOOKING` | 6 |
 | `EVENT_CACHE_TTL_SECONDS` | 60 |
-| `LOGIN_RATE_LIMIT_PER_MIN` | 5 |
+| `LOGIN_RATE_LIMIT_PER_MIN` | 5 (failed attempts) |
 | `BOOKING_RATE_LIMIT_PER_MIN` | 10 |
 | `EXPIRY_SWEEP_SECONDS` | 30 |
 | `CORS_ORIGINS` | `http://localhost:3000` |
@@ -354,8 +359,10 @@ TicketRush/
 | Integration | same `Idempotency-Key` twice → one booking, same id | idempotency |
 | Integration | another user's booking → 404 | ownership |
 | Integration | `expire_pending_bookings` with `now` 6 min later frees seats | expiry |
-| Integration | 6th login attempt in a minute → 429 | rate limit |
-| **Concurrency** | 20 threads, each its own session and user, try to book the same seat → exactly 1 success, 19 conflicts, seat HELD once | **no double booking** |
+| Integration | 6th login after 5 failures in a minute → 429; 11th booking in a minute → 429 | rate limit |
+| Integration | Redis down: `/health` says degraded, event detail still 200 | fail open |
+| **Concurrency** | 20 threads, each its own session and user, try to book the same seat → exactly 1 success, 19 conflicts, seat HELD once (5 rounds) | **no double booking** |
+| **Concurrency** | same `Idempotency-Key` sent by 10 threads at once → 1 booking, all get the same id | **no duplicate booking** |
 
 `FakePaymentGateway` is a **fake** (a working simple implementation). One test uses `unittest.mock` to assert `refund` was called on
 cancel of a confirmed booking: that is an **interaction** test, the rest are **state** tests.
@@ -367,7 +374,8 @@ cancel of a confirmed booking: that is an **interaction** test, the rest are **s
 ### Questions this project lets you answer with code
 
 1. **How do you prevent double booking?** Transaction + `SELECT ... FOR UPDATE SKIP LOCKED` on the seat rows, `status='AVAILABLE'`
-   filter, ordered locking. Proven by the 20-thread test and `scripts/race.py`.
+   filter, ordered locking. Proven by the 20-thread test and `scripts/race.py` (50 buyers → 1 × 201, 49 × 409).
+   Removing `FOR UPDATE` makes the test fail: 18 of 20 buyers got the same seat.
 2. **Optimistic vs pessimistic locking?** Pessimistic = lock first (`FOR UPDATE`), good for hot rows with high contention, like one popular
    seat. Optimistic = a `version` column and `UPDATE ... WHERE version = ?`, retry on 0 rows; good when conflicts are rare.
 3. **What is ACID?** Atomicity (all or nothing: the hold), Consistency (constraints hold), Isolation (locks stop two holds seeing the same
@@ -385,6 +393,7 @@ cancel of a confirmed booking: that is an **interaction** test, the rest are **s
 10. **How does your cache stay correct?** Cache-aside with a 60 s TTL and delete-on-write. Postgres stays the source of truth; Redis down
     means slower, not wrong.
 11. **How does rate limiting work?** Fixed window counter with `INCR` + `EXPIRE` in Redis, shared by all app instances, 429 + `Retry-After`.
+    Login counts only failed attempts (brute-force protection); booking counts every request.
 12. **Offset vs cursor pagination?** Offset is simple and allows "jump to page N", but gets slow for deep pages and can skip/repeat rows
     when data changes. Cursor (keyset) pagination fixes both; I would switch to it for the bookings history at scale.
 13. **What happens to unpaid holds?** Sweeper expires them every 30 s; pay also checks expiry itself, so a late payment is refused even

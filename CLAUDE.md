@@ -30,7 +30,7 @@ Ticket-booking REST API (FastAPI + PostgreSQL + Redis) built to show backend fun
 ## Defaults
 
 Hold 5 min, max 6 seats per booking, expiry sweep every 30 s, event cache TTL 60 s,
-login 5/min per IP, booking 10/min per user, JWT 30 min.
+5 failed logins/min per IP, 10 bookings/min per user, JWT 30 min.
 
 ## Commands (after the build)
 

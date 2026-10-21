@@ -9,42 +9,42 @@ Suggested timing: Part A + B on day 1, Part C + D on day 2.
 
 **A1. Clean-up and setup**
 
-- [ ] Remove the old multi-service scaffold: `services/`, `libs/`, `deploy/`, `loadtest/`, `docs/adr/` (incl. the committed `.venv`)
-- [ ] `.gitignore` (venvs, `__pycache__`, `.env`, `.pytest_cache`, `.ruff_cache`), `.env.example`, `pyproject.toml` (deps + ruff + pytest config)
-- [ ] `docker-compose.yml`: `api`, `db` (postgres:16 + init script creating `ticketrush_test`), `redis` (redis:7); healthchecks; `depends_on: service_healthy`; named volume
-- [ ] `Dockerfile`: python:3.12-slim, non-root user, runs `alembic upgrade head` then uvicorn
+- [x] Remove the old multi-service scaffold: `services/`, `libs/`, `deploy/`, `loadtest/`, `docs/adr/` (incl. the committed `.venv`)
+- [x] `.gitignore` (venvs, `__pycache__`, `.env`, `.pytest_cache`, `.ruff_cache`), `.env.example`, `pyproject.toml` (deps + ruff + pytest config)
+- [x] `docker-compose.yml`: `api`, `db` (postgres:16 + init script creating `ticketrush_test`), `redis` (redis:7); healthchecks; `depends_on: service_healthy`; named volume
+- [x] `Dockerfile`: python:3.12-slim, non-root user, runs `alembic upgrade head` then uvicorn
 
 **A2. Core**
 
-- [ ] `core/config.py`, `database.py`, `redis_client.py`, `security.py`, `errors.py`, `logging.py`, `middleware.py`
-- [ ] Request-id middleware (accept `X-Request-ID` or generate), access log line with method, path, status, duration
-- [ ] One error JSON format for app errors, 404/405, 422 and unexpected 500s
-- [ ] CORS allow-list from settings
-- [ ] `GET /health` checks Postgres and Redis
+- [x] `core/config.py`, `database.py`, `redis_client.py`, `security.py`, `errors.py`, `logging.py`, `middleware.py`
+- [x] Request-id middleware (accept `X-Request-ID` or generate), access log line with method, path, status, duration
+- [x] One error JSON format for app errors, 404/405, 422 and unexpected 500s
+- [x] CORS allow-list from settings
+- [x] `GET /health` checks Postgres and Redis
 
 **A3. Data**
 
-- [ ] SQLAlchemy models for `users`, `events`, `seats`, `bookings`, `booking_seats` with every constraint and index in guide section 5
-- [ ] One Alembic migration that creates all of it (`alembic upgrade head` works on an empty DB)
-- [ ] `app/scripts/seed.py`: admin user + 2 sample events with seats (idempotent)
+- [x] SQLAlchemy models for `users`, `events`, `seats`, `bookings`, `booking_seats` with every constraint and index in guide section 5
+- [x] One Alembic migration that creates all of it (`alembic upgrade head` works on an empty DB)
+- [x] `app/scripts/seed.py`: admin user + 2 sample events with seats (idempotent)
 
 **A4. Features**
 
-- [ ] Auth: register, login, `/users/me`; bcrypt; JWT; `get_current_user`, `require_admin`
-- [ ] Events: create (with seats), list (filter, sort, pagination), detail (cached), patch (admin, invalidates cache), seats
-- [ ] Bookings: create with `FOR UPDATE SKIP LOCKED` + `Idempotency-Key`, pay, cancel, list mine, get one (404 if not mine)
-- [ ] Domain pure functions from guide section 9
-- [ ] `PaymentGateway` protocol + `FakePaymentGateway` injected into `BookingService`
-- [ ] Rate limiting: login 5/min/IP, create booking 10/min/user, 429 + `Retry-After`, fail open
-- [ ] Expiry sweeper started in `lifespan`, plus `expire_pending_bookings(session, now)`
+- [x] Auth: register, login, `/users/me`; bcrypt; JWT; `get_current_user`, `require_admin`
+- [x] Events: create (with seats), list (filter, sort, pagination), detail (cached), patch (admin, invalidates cache), seats
+- [x] Bookings: create with `FOR UPDATE SKIP LOCKED` + `Idempotency-Key`, pay, cancel, list mine, get one (404 if not mine)
+- [x] Domain pure functions from guide section 9
+- [x] `PaymentGateway` protocol + `FakePaymentGateway` injected into `BookingService`
+- [x] Rate limiting: login 5/min/IP, create booking 10/min/user, 429 + `Retry-After`, fail open
+- [x] Expiry sweeper started in `lifespan`, plus `expire_pending_bookings(session, now)`
 
 **A5. Tests and CI**
 
-- [ ] Every test in guide section 12, including the 20-thread concurrency test
-- [ ] `scripts/race.py`: fires N concurrent `POST /bookings` (different users) at one seat on the running API and prints successes vs 409s
-- [ ] `.github/workflows/ci.yml`: Postgres + Redis service containers, `ruff check`, `ruff format --check`, `pytest`
-- [ ] `README.md`: what it is, architecture diagram, run in 3 commands, how to test, API table, design decisions, "code map" (concept → file)
-- [ ] `ruff check .` and `pytest` pass locally; `docker compose up --build` serves Swagger at `http://localhost:8000/docs`
+- [x] Every test in guide section 12, including the 20-thread concurrency test
+- [x] `scripts/race.py`: fires N concurrent `POST /bookings` (different users) at one seat on the running API and prints successes vs 409s
+- [x] `.github/workflows/ci.yml`: Postgres + Redis service containers, `ruff check`, `ruff format --check`, `pytest`
+- [x] `README.md`: what it is, architecture diagram, run in 3 commands, how to test, API table, design decisions, "code map" (concept → file)
+- [x] `ruff check .` and `pytest` pass locally; `docker compose up --build` serves Swagger at `http://localhost:8000/docs`
 
 ## Part B: Verify it yourself (do not skip)
 
@@ -56,7 +56,7 @@ Suggested timing: Part A + B on day 1, Part C + D on day 2.
 - [ ] Repeat `POST /bookings` with the same `Idempotency-Key`: same booking id comes back
 - [ ] Try to book a held seat from a second user: `409`
 - [ ] Pay with token `fail`: `402`, booking still `PENDING`
-- [ ] Wrong password 6 times: the 6th is `429`
+- [ ] Wrong password 5 times, then a 6th login (even correct): `429`
 - [ ] Open another user's booking: `404`
 - [ ] Run `pytest -v` and `python scripts/race.py`; write the real numbers in your notes
 - [ ] Push; CI is green on GitHub
