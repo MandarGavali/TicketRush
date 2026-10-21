@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TicketRush</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='%23FF385C'/><path d='M9 11h14v3a2 2 0 0 0 0 4v3H9v-3a2 2 0 0 0 0-4z' fill='white'/></svg>">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="logo" href="#/">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="currentColor"/><path d="M8 11h16v3.2a2 2 0 0 0 0 3.6V21H8v-3.2a2 2 0 0 0 0-3.6z" fill="#fff"/></svg>
+        <span>ticketrush</span>
+      </a>
+
+      <form class="search" id="search-form" autocomplete="off">
+        <label class="search-field">
+          <span class="search-label">Where</span>
+          <input name="city" placeholder="Search cities">
+        </label>
+        <span class="search-divider"></span>
+        <label class="search-field">
+          <span class="search-label">From</span>
+          <input name="from_date" type="date">
+        </label>
+        <span class="search-divider"></span>
+        <label class="search-field search-field-wide">
+          <span class="search-label">What</span>
+          <input name="q" placeholder="Artist, show or title">
+        </label>
+        <button class="search-button" type="submit" aria-label="Search">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M13 24a11 11 0 1 1 0-22 11 11 0 0 1 0 22zm8.5-2.5L29 29" fill="none" stroke="currentColor" stroke-width="4"/></svg>
+        </button>
+      </form>
+
+      <nav class="topbar-right">
+        <a class="host-link hidden" id="host-link" href="#/host">Host an event</a>
+        <div class="menu">
+          <button class="menu-button" id="menu-button" aria-haspopup="true" aria-expanded="false">
+            <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M2 16h28M2 24h28M2 8h28" fill="none" stroke="currentColor" stroke-width="3"/></svg>
+            <span class="avatar" id="avatar"></span>
+          </button>
+          <div class="menu-panel hidden" id="menu-panel" role="menu"></div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main id="view" class="container"></main>
+
+  <footer class="footer">
+    <div class="container footer-inner">
+      <span>© TicketRush · FastAPI + PostgreSQL + Redis</span>
+      <span><a href="/docs" target="_blank" rel="noopener">API docs</a> · <a href="/health" target="_blank" rel="noopener">Health</a></span>
+    </div>
+  </footer>
+
+  <div class="modal-backdrop hidden" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header">
+        <button class="icon-button" id="modal-close" aria-label="Close">✕</button>
+        <h2 id="modal-title">Log in or sign up</h2>
+        <span></span>
+      </div>
+      <form class="modal-body" id="auth-form">
+        <h3 id="auth-heading">Welcome to TicketRush</h3>
+        <div class="field-group">
+          <label class="field hidden" id="name-field">
+            <span>Full name</span>
+            <input name="full_name" maxlength="100">
+          </label>
+          <label class="field">
+            <span>Email</span>
+            <input name="email" type="email" required>
+          </label>
+          <label class="field">
+            <span>Password</span>
+            <input name="password" type="password" minlength="8" maxlength="72" required>
+          </label>
+        </div>
+        <p class="hint" id="auth-hint">Demo admin: admin@ticketrush.dev / admin12345</p>
+        <button class="btn btn-primary btn-block" type="submit" id="auth-submit">Continue</button>
+        <p class="switch">
+          <span id="switch-text">New here?</span>
+          <button type="button" class="link-button" id="auth-switch">Create an account</button>
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

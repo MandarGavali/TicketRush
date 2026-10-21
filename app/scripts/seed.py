@@ -1,4 +1,4 @@
-"""Create an admin user and two sample events. Safe to run more than once.
+"""Create an admin user and sample events. Safe to run more than once.
 
 Run: python -m app.scripts.seed
 """
@@ -27,29 +27,87 @@ ADMIN_EMAIL = "admin@ticketrush.dev"
 DEV_ADMIN_PASSWORD = "admin12345"  # local development only; set SEED_ADMIN_PASSWORD elsewhere
 
 
+# (title, description, venue, city, days from now, price in paise, rows, seats per row)
+SAMPLE_EVENTS = [
+    (
+        "Arijit Singh Live",
+        "An evening of live music.",
+        "Jio World Garden",
+        "Mumbai",
+        30,
+        249900,
+        10,
+        20,
+    ),
+    (
+        "Stand-up Comedy Night",
+        "Five comics, one mic.",
+        "Phoenix Marketcity",
+        "Pune",
+        14,
+        79900,
+        5,
+        10,
+    ),
+    ("Jazz by the Bay", "Smooth jazz under the stars.", "NCPA", "Mumbai", 5, 99900, 6, 14),
+    (
+        "Prateek Kuhad Tour",
+        "Indie folk, full band.",
+        "Phoenix Arena",
+        "Bengaluru",
+        21,
+        179900,
+        8,
+        16,
+    ),
+    (
+        "The Merchant of Venice",
+        "A modern staging of the classic play.",
+        "Prithvi Theatre",
+        "Mumbai",
+        10,
+        59900,
+        6,
+        12,
+    ),
+    ("IPL Watch Party", "Big screen, bigger crowd.", "Social", "Pune", 3, 49900, 4, 12),
+    (
+        "Garba Night",
+        "Dance till late with live dhol.",
+        "Gymkhana Grounds",
+        "Ahmedabad",
+        18,
+        39900,
+        8,
+        18,
+    ),
+    (
+        "Sunburn Arena",
+        "Electronic music festival night.",
+        "NSCI Dome",
+        "Mumbai",
+        45,
+        299900,
+        10,
+        20,
+    ),
+]
+
+
 def sample_events() -> list[EventCreate]:
     now = datetime.now(UTC)
     return [
         EventCreate(
-            title="Arijit Singh Live",
-            description="An evening of live music.",
-            venue="Jio World Garden",
-            city="Mumbai",
-            starts_at=now + timedelta(days=30),
-            price_paise=249900,
-            rows=10,
-            seats_per_row=20,
-        ),
-        EventCreate(
-            title="Stand-up Comedy Night",
-            description="Five comics, one mic.",
-            venue="Phoenix Marketcity",
-            city="Pune",
-            starts_at=now + timedelta(days=14),
-            price_paise=79900,
-            rows=5,
-            seats_per_row=10,
-        ),
+            title=title,
+            description=description,
+            venue=venue,
+            city=city,
+            starts_at=now + timedelta(days=days),
+            price_paise=price,
+            rows=rows,
+            seats_per_row=per_row,
+        )
+        for title, description, venue, city, days, price, rows, per_row in SAMPLE_EVENTS
     ]
 
 

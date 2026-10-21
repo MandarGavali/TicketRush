@@ -13,6 +13,7 @@ RUN pip install -r requirements.txt
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
+COPY frontend ./frontend
 
 # Do not run as root inside the container.
 RUN useradd --create-home appuser

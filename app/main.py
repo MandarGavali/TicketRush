@@ -2,9 +2,12 @@ import asyncio
 import contextlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api import health
 from app.api.v1 import auth, bookings, events, users
@@ -13,6 +16,8 @@ from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import request_id_middleware
 from app.workers.expiry import run_expiry_loop
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 
 
 @asynccontextmanager
@@ -53,6 +58,14 @@ def create_app() -> FastAPI:
         api_v1.include_router(module.router)
     app.include_router(api_v1)
     app.include_router(health.router)
+
+    # The UI is static files served by this same app: same origin, so no CORS needed for it.
+    app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+    @app.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(FRONTEND_DIR / "index.html")
+
     return app
 
 
