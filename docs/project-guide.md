@@ -41,6 +41,7 @@ A ticket-booking REST API built to show solid backend fundamentals.
 | Design | Dependency injection, `PaymentGateway` interface with a fake | SOLID, DI, interfaces, testability |
 | Testing | Unit tests (pure functions), API tests, the concurrency test | Test pyramid, mocking vs fakes |
 | DevOps | Dockerfile, Docker Compose with healthchecks, GitHub Actions CI | Containers, CI |
+| UI | Airbnb-style single-page app served by FastAPI (plain HTML/CSS/JS, no build step) | Demo-able product; same-origin, XSS-safe rendering |
 
 **Out (cut on purpose, mention only as "next steps")**
 
@@ -277,6 +278,23 @@ Time is always passed in as an argument, never read inside, so tests control it.
 
 ---
 
+## 9a. UI (thin client, for the demo)
+
+- Plain HTML + CSS + JavaScript in `frontend/`, served by the same FastAPI app: `GET /` returns `index.html`, assets under `/static`.
+  Same origin, so no CORS setup is needed; no Node, no build step.
+- Look and feel modelled on Airbnb: white, rounded cards, coral accent, a pill search bar (city, date, keyword), sticky price card.
+- Pages (hash routing, e.g. `#/event/2`):
+  - **Home**: search + sort chips + grid of event cards with price per seat and seats left.
+  - **Event**: seat map (stage at the top, rows A, B, ...), refreshed every 5 s so other buyers' holds appear; sticky card with
+    selected seats, total and **Reserve** (sends `POST /bookings` with an `Idempotency-Key`).
+  - **Checkout**: hold countdown, payment token (`fail` simulates a decline), **Confirm and pay**.
+  - **Trips**: my bookings with status, pay and cancel.
+  - **Host an event**: admin-only form.
+  - Login / sign-up modal; errors shown as toasts using the API's `error.message`.
+- Talking points: the UI never decides availability, the API does (a 409 just refreshes the map); user text is inserted with
+  `textContent`, never `innerHTML` (XSS); the JWT is kept in `localStorage` for simplicity (trade-off: readable by injected scripts;
+  an HttpOnly cookie + CSRF token is the safer production choice).
+
 ## 10. Code layout
 
 ```
@@ -313,6 +331,7 @@ TicketRush/
     unit/                   # domain + security, no DB
     integration/            # API tests with TestClient + real Postgres/Redis, incl. test_concurrency.py
                             # (helpers.py: shared helpers; conftest.py: fixtures)
+  frontend/                 # index.html, styles.css, app.js (Airbnb-style UI)
   scripts/race.py           # live demo: N concurrent requests for one seat against the running API
   docker/postgres-init.sql  # creates ticketrush_test on first start
   Dockerfile

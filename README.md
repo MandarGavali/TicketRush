@@ -7,6 +7,16 @@ events, **hold seats for 5 minutes**, pay through a mock payment gateway, or can
 sold twice**, even when many people click "book" at the same moment. A database transaction with a row lock
 (`SELECT ... FOR UPDATE SKIP LOCKED`) enforces it, and a 20-thread concurrency test proves it.
 
+## UI
+
+An Airbnb-style web app ships with the API (plain HTML/CSS/JS in `frontend/`, served by FastAPI at `/`, no build step):
+search and sort events, pick seats on a live seat map, reserve, pay on a checkout page with the hold countdown, and manage bookings under **Trips**.
+Admins get a **Host an event** page.
+
+| Browse | Pick seats | Checkout |
+|---|---|---|
+| ![Home](docs/screenshots/home.png) | ![Seat map](docs/screenshots/event.png) | ![Checkout](docs/screenshots/checkout.png) |
+
 ## Architecture
 
 ```mermaid
@@ -29,10 +39,10 @@ Full design: [`docs/project-guide.md`](docs/project-guide.md).
 ```bash
 cp .env.example .env                                  # then change JWT_SECRET
 docker compose up --build -d                          # Postgres + Redis + API (runs migrations)
-docker compose exec api python -m app.scripts.seed    # admin user + 2 sample events
+docker compose exec api python -m app.scripts.seed    # admin user + 8 sample events
 ```
 
-Open **http://localhost:8000/docs**. Seeded admin: `admin@ticketrush.dev` / `admin12345` (dev only; set `SEED_ADMIN_PASSWORD`).
+Open **http://localhost:8000** for the app and **http://localhost:8000/docs** for Swagger. Seeded admin: `admin@ticketrush.dev` / `admin12345` (dev only; set `SEED_ADMIN_PASSWORD`).
 In Swagger, call `POST /api/v1/auth/login`, copy `access_token`, click **Authorize** and paste it.
 
 ## Local development (without the API container)
@@ -69,7 +79,7 @@ uvicorn app.main:app --reload
 
 ```bash
 docker compose up -d db redis     # tests use the ticketrush_test database and Redis db 1
-pytest -v                         # 75 tests: unit + integration + concurrency
+pytest -v                         # 77 tests: unit + integration + concurrency
 ruff check . && ruff format --check .
 ```
 
@@ -146,6 +156,7 @@ All routes are under `/api/v1` except `/health`. Errors always look like
 | DTOs (request and response models) | `app/schemas/` |
 | Concurrency test | `tests/integration/test_concurrency.py` |
 | Mock vs fake (interaction test) | `tests/integration/test_bookings.py` (`test_cancel_confirmed_booking_refunds`) |
+| UI: rendering without XSS, idempotent Reserve button | `frontend/app.js` (`h()`, `reserve()`) |
 | Containers | `Dockerfile`, `docker-compose.yml` |
 | CI | `.github/workflows/ci.yml` |
 

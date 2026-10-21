@@ -38,6 +38,10 @@ Suggested timing: Part A + B on day 1, Part C + D on day 2.
 - [x] Rate limiting: login 5/min/IP, create booking 10/min/user, 429 + `Retry-After`, fail open
 - [x] Expiry sweeper started in `lifespan`, plus `expire_pending_bookings(session, now)`
 
+**A4b. UI**
+
+- [x] Airbnb-style single-page UI in `frontend/` served at `/` (home, event + seat map, checkout, trips, host); see guide 9a
+
 **A5. Tests and CI**
 
 - [x] Every test in guide section 12, including the 20-thread concurrency test
@@ -49,6 +53,8 @@ Suggested timing: Part A + B on day 1, Part C + D on day 2.
 ## Part B: Verify it yourself (do not skip)
 
 - [ ] `docker compose up --build`; open `/docs`; `/health` is green
+- [ ] Open `http://localhost:8000` in two browsers (one normal, one private), log in as two users, pick the same seat in both and
+      click Reserve: one goes to checkout, the other gets "Seats already taken" and the map refreshes
 - [ ] Stop Redis (`docker compose stop redis`): `/health` reports Redis down, `GET /events/{id}` still works; start it again
 - [ ] In Swagger: register, log in, click **Authorize**, paste the token, call `/users/me`
 - [ ] Log in as the seeded admin, create an event, list it with a filter and `sort=-price`

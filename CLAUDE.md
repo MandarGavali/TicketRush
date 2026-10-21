@@ -12,7 +12,7 @@ Ticket-booking REST API (FastAPI + PostgreSQL + Redis) built to show backend fun
 
 ## Source of truth
 
-- `docs/project-guide.md`: scope, stack, architecture, data model, API, flows, tests, interview Q&A.
+- `docs/project-guide.md`: scope, stack, architecture, data model, API, flows, UI, tests, interview Q&A.
 - `docs/build-checklist.md`: Part A (build), B (verify), C (understand), D (interview prep).
 - If code diverges from the guide, update the guide first.
 
@@ -34,6 +34,6 @@ Hold 5 min, max 6 seats per booking, expiry sweep every 30 s, event cache TTL 60
 
 ## Commands (after the build)
 
-- Run: `docker compose up --build` → http://localhost:8000/docs
+- Run: `docker compose up --build` → UI at http://localhost:8000, Swagger at /docs
 - Test: `docker compose up -d db redis` then `pytest -v`
 - Lint: `ruff check . && ruff format --check .`
